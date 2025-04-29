@@ -7,6 +7,8 @@
 #include "RenderableMesh.hpp"
 #include "ForwardRenderer.hpp"
 #include "ShapeRenderer.hpp"
+#include "InstanceCreator.hpp"
+
 
 /// @brief A Game may hold, update and render 3D geometry and GUI elements
 class Game : public eeng::GameBase
@@ -49,6 +51,8 @@ private:
 
     // Entity registry - to use in labs
     std::shared_ptr<entt::registry> entity_registry;
+    
+    InstanceCreator instanceCreator;
 
     // Matrices for view, projection and viewport
     struct Matrices
@@ -97,18 +101,22 @@ private:
     } player;
 
     // Game meshes
-    std::shared_ptr<eeng::RenderableMesh> grassMesh, horseMesh, characterMesh;
+    std::shared_ptr<eeng::RenderableMesh> grassMesh;
+    std::shared_ptr<eeng::RenderableMesh> horseMesh;
+    std::shared_ptr<eeng::RenderableMesh> characterMesh;
 
     // Game entity transformations
-    glm::mat4 characterWorldMatrix1, characterWorldMatrix2, characterWorldMatrix3;
+    glm::mat4 characterWorldMatrix1;
+    glm::mat4 characterWorldMatrix2;
+    glm::mat4 characterWorldMatrix3;
     glm::mat4 grassWorldMatrix, horseWorldMatrix;
 
     // Game entity AABBs (for collision detection or visualization)
     eeng::AABB character_aabb1, character_aabb2, character_aabb3, horse_aabb, grass_aabb;
 
-    // Placeholder animation state
-    int characterAnimIndex = -1;
-    float characterAnimSpeed = 1.0f;
+    //// Placeholder animation state
+    //int characterAnimIndex = -1;
+    //float characterAnimSpeed = 1.0f;
 
     // Stats
     int drawcallCount = 0;
@@ -123,6 +131,14 @@ private:
     void updatePlayer(
         float deltaTime,
         InputManagerPtr input);
+
+    void movement_system(float deltaTime);
+
+    void player_controller_system(InputManagerPtr input);
+
+    void render_system(float time);
+
+    void NPC_controller_system();
 };
 
 #endif
