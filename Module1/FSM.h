@@ -6,9 +6,6 @@
 
 class FSM
 {
-public:
-	enum state { Tpose, Idle, Walk, Jump };
-
 private:
 	bool stateSwitched = false;
 	bool clipDone = false;
@@ -23,15 +20,15 @@ private:
 	float currentAnimationTimer;
 	float speedMarkiplier;
 
-	void animate_whole_clip(state, std::shared_ptr<eeng::RenderableMesh> resource);
+	void animate_whole_clip(int animIndex, std::shared_ptr<eeng::RenderableMesh> resource);
 
 public:
 
-	state m_lastState = state::Idle;
-	state m_currentState = state::Idle;
-	state m_futureState = state::Idle;
+	int m_lastState = 0;
+	int m_currentState = 0;
+	int m_futureState = 0;
 	void tick(float delta, float totalTime);
-	void transition_state(state toState, bool playWhole, std::shared_ptr<eeng::RenderableMesh> resource, float duration = 1.0f);
+	void transition_state(int toAnimIndex, bool playWhole, std::shared_ptr<eeng::RenderableMesh> resource, float duration = 1.0f);
 	FSM() {};
 	~FSM() {};
 };

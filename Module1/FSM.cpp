@@ -15,9 +15,9 @@ void FSM::tick(float delta, float totalTime)
 	if (!clipDone) {
 		currentAnimationTimer += delta * speedMarkiplier;
 	}
-	ImGui::Text("current state: %i", static_cast<int>(m_currentState));
-	ImGui::Text("future state: %i", static_cast<int>(m_futureState));
-	ImGui::Text("last state: %i", static_cast<int>(m_lastState));
+	ImGui::Text("current state: %i", m_currentState);
+	ImGui::Text("future state: %i", m_futureState);
+	ImGui::Text("last state: %i", m_lastState);
 	ImGui::Text("Blend Factor: %f", m_blendFactor);
 	ImGui::Text("Current Animation Timer: %f", currentAnimationTimer);
 	ImGui::Text("Current Timer: %f", currentTime);
@@ -27,16 +27,16 @@ void FSM::tick(float delta, float totalTime)
 	ImGui::End();
 }
 
-void FSM::animate_whole_clip(state stateToPlay, std::shared_ptr<eeng::RenderableMesh> resource)
+void FSM::animate_whole_clip(int stateToPlay, std::shared_ptr<eeng::RenderableMesh> resource)
 {
-	int currentAnimIndex = static_cast<int>(m_currentState);
-	int futureAnimIndex = static_cast<int>(stateToPlay);
+	int currentAnimIndex = m_currentState;
+	int futureAnimIndex = stateToPlay;
 	m_blendFactor = glm::clamp(m_blendFactor, 0.0f, 1.0f);
 
 	resource->animateBlend(currentAnimIndex, futureAnimIndex, currentTime, currentAnimationTimer, m_blendFactor);
 }
 
-void FSM::transition_state(state toState, bool playWholeClip, std::shared_ptr<eeng::RenderableMesh> resource, float duration)
+void FSM::transition_state(int toAnimIndex, bool playWholeClip, std::shared_ptr<eeng::RenderableMesh> resource, float duration)
 {
 	//int clipAnimIndex = static_cast<int>(toState);
 
@@ -59,7 +59,7 @@ void FSM::transition_state(state toState, bool playWholeClip, std::shared_ptr<ee
 	// play whole clip by forcing quick blending 
 	if (playWholeClip && !clipDone) {
 		stateSwitched = true;
-		int clipAnimIndex = static_cast<int>(toState);
+		int clipAnimIndex = toAnimIndex;
 
 		float clipTime = resource->m_animations[clipAnimIndex].duration_ticks / resource->m_animations[clipAnimIndex].tps; // seconds
 		speedMarkiplier = clipTime / duration;
@@ -73,16 +73,16 @@ void FSM::transition_state(state toState, bool playWholeClip, std::shared_ptr<ee
 			currentAnimationTimer = 0.0f;
 		}
 
-		animate_whole_clip(toState, resource);
+		animate_whole_clip(toAnimIndex, resource);
 		return; // ignore rest
 	}
 
 	clipDone = false; // just to reset clip..
 
 	// update future only if it is not the same as requested state
-	if (m_futureState != toState) {
+	if (m_futureState != toAnimIndex) {
 		m_lastState = m_currentState;
-		m_futureState = toState;
+		m_futureState = toAnimIndex;
 		m_blendFactor = 0.0f;
 		blendDone = false;
 	}
@@ -94,12 +94,12 @@ void FSM::transition_state(state toState, bool playWholeClip, std::shared_ptr<ee
 	if (blendDone) {
 		m_currentState = m_futureState;
 		//m_blendFactor = 0.0f;
-		int currentAnimIndex = static_cast<int>(m_currentState);
+		int currentAnimIndex = m_currentState;
 		resource->animate(currentAnimIndex, currentTime);
 	}
 	else {
-		int currentAnimIndex = static_cast<int>(m_currentState);
-		int futureAnimIndex = static_cast<int>(m_futureState);
+		int currentAnimIndex = m_currentState;
+		int futureAnimIndex = m_futureState;
 		resource->animateBlend(currentAnimIndex, futureAnimIndex, currentTime, currentTime, m_blendFactor);
 	}
 

@@ -393,16 +393,16 @@ void Game::player_controller_system(InputManagerPtr input, float deltaTime) {
         //}
         if (player.isJumping) {
             int animIndex = static_cast<int>(player.Jump);
-            fsm.transition_state(FSM::state::Jump, true, mesh.resource, player.jumpDuration);
+            fsm.transition_state(animIndex, true, mesh.resource, player.jumpDuration);
             continue;
         }
         else if (glm::length(dir) > 0) {
             int animIndex = static_cast<int>(player.Walk);
-            fsm.transition_state(FSM::state::Walk, false, mesh.resource);
+            fsm.transition_state(animIndex, false, mesh.resource, 1.0f);
         }
         else {
-            int animIndex = static_cast<int>(player.Jump);
-            fsm.transition_state(FSM::state::Idle, false, mesh.resource);
+            int animIndex = static_cast<int>(player.Idle);
+            fsm.transition_state(animIndex, false, mesh.resource, 1.0f);
             continue;
         }
 

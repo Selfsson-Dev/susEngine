@@ -46,7 +46,7 @@ void InstanceCreator::create_player(glm::vec3 spawn)
 	// Remove root motion
 	playerMesh.resource->removeTranslationKeys("mixamorig:Hips");
 
-	PlayerControllerComponent pcc{ 1.5f, 2.0f, 1 , 0.0f, 1.5f, 0.0f};
+	PlayerControllerComponent pcc{ 1.5f, 2.0f, 0, 1.5f, 0.0f};
 
 	AnimationComponent animation{};
 	animation.characterAnimIndex = 1;
