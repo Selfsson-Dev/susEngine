@@ -22,6 +22,7 @@ bool Game::init()
     entity_registry = std::make_shared<entt::registry>();
 
     instanceCreator = InstanceCreator(entity_registry);
+    fsm = FSM();
 
     instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::PLAYER);
     instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::GRASS, glm_aux::vec3_000);
@@ -85,7 +86,7 @@ void Game::update(
     NPC_controller_system();
 
     movement_system(deltaTime);
-    fsm.tick(deltaTime);
+    fsm.tick(deltaTime, time);
 
     //FSM_system(deltaTime, time);
     //updatePlayer(deltaTime, input);
@@ -351,12 +352,12 @@ void Game::player_controller_system(InputManagerPtr input) {
     }
         
 
-    auto view = entity_registry->view<TransformComponent, LinearVelocityComponent, PlayerControllerComponent, AnimationComponent>();
+    auto view = entity_registry->view<TransformComponent, LinearVelocityComponent, PlayerControllerComponent, AnimationComponent, MeshComponent>();
 
     // velocity = dir * speed;
     // set velocity
     // seperate into xz and y planes to get jump also
-    for (auto [entity, tfm, vel, player, anim] : view.each()) {
+    for (auto [entity, tfm, vel, player, anim, mesh] : view.each()) {
         //eeng::Log("normalized dir is: %f %f %f" , dirNorm.x, dirNorm.y, dirNorm.z);
 
         vel.velocity = dirNorm * player.moveSpeed;
@@ -365,12 +366,20 @@ void Game::player_controller_system(InputManagerPtr input) {
         camera.pos = tfm.pos;
 
         // only rotate if we actually move
-        if (!glm::length(dir) > 0) {
-            anim.characterAnimIndex = 1;
-            continue;
+        //if (!glm::length(dir) > 0) {
+        //    anim.characterAnimIndex = 1;
+        //    continue;
+        //}
+        //else {
+        //    anim.characterAnimIndex = 2;
+        //}
+
+        if (glm::length(dir) > 0) {
+            fsm.transition_state(FSM::state::Walk, false, mesh.resource);
         }
         else {
-            anim.characterAnimIndex = 2;
+            fsm.transition_state(FSM::state::Idle, false, mesh.resource);
+            continue;
         }
 
         glm::vec3 modelFwd = glm::vec3(0, 0, 1);
@@ -402,10 +411,10 @@ void Game::render_system(float time) {
     auto animView = entity_registry->view<AnimationComponent, MeshComponent>();
     static float blendingAmount = 0.0f;
     static int animationState = 0;
-    ImGui::Begin("animation blending...");
-    ImGui::SliderFloat("blending", &blendingAmount, 0.0f, 1.0f);
-    ImGui::SliderInt("animation state", &animationState, 0, 10);
-    ImGui::End();
+    //ImGui::Begin("animation blending...");
+    //ImGui::SliderFloat("blending", &blendingAmount, 0.0f, 1.0f);
+    //ImGui::SliderInt("animation state", &animationState, 0, 10);
+    //ImGui::End();
 
     //for (auto [entity, animation, mesh] : animView.each()) {
     //   mesh.resource->animate(animationState, animation.characterAnimSpeed * time);
@@ -514,14 +523,14 @@ void Game::BONEGIZMO()
         }
     }
 }
-
+/*
 enum state{Tpose, Idle, Walk, Jump};
 
 float blending = 0.0f;
 bool transitionDone = false;
 
-state originState = state::Idle;
-state goalState = state::Idle;
+//state originState = state::Idle;
+//state goalState = state::Idle;
 
 void Game::FSM_system(float delta, float time)
 {
@@ -532,7 +541,6 @@ void Game::FSM_system(float delta, float time)
 
     for (auto [entity, pcc, tfm, vel, mesh, animation] : view.each())
     {
-        /*
             set states
 
             if states are the same
@@ -545,7 +553,7 @@ void Game::FSM_system(float delta, float time)
 
             if done set both to the same
             else do the interpolation
-        */
+
         if (glm::length(vel.velocity) > 0.0f)
         {
             goalState = state::Walk;
@@ -601,7 +609,7 @@ void Game::FSM_system(float delta, float time)
         }
     }
 }
-
+*/
 /*
 
         if (currentState == lastState) {

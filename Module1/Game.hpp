@@ -8,6 +8,7 @@
 #include "ForwardRenderer.hpp"
 #include "ShapeRenderer.hpp"
 #include "InstanceCreator.hpp"
+#include "FSM.h"
 
 
 /// @brief A Game may hold, update and render 3D geometry and GUI elements
@@ -130,9 +131,9 @@ private:
 
     /// @brief Placeholder system for updating the 'player' based on inputs
     /// @param deltaTime 
-    void updatePlayer(
-        float deltaTime,
-        InputManagerPtr input);
+    //void updatePlayer(
+    //    float deltaTime,
+    //    InputManagerPtr input);
 
     void movement_system(float deltaTime);
 
@@ -144,7 +145,7 @@ private:
 
     void BONEGIZMO();
 
-    void FSM_system(float delta, float time);
+    //void FSM_system(float delta, float time);
 };
 
 #endif

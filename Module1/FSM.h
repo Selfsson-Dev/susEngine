@@ -5,15 +5,24 @@
 
 class FSM
 {
-	enum state { Tpose, Idle, Walk, Jump };
-	float blendingSpeed;
-	float m_blendFactor;
-	float currentTime;
-	state m_originState;
-	state m_lastState;
-	state m_currentState;
-	float currentAnimationDuration;
+	bool stateSwitched = false;
+
+	// blending
+	float blendingSpeed = 1.0f;
+	float m_blendFactor = 0.0f;
+	bool blendDone = false;
+
+	// time
+	float currentTime = 0.0f;
+	//float currentAnimationDuration;
 public:
-	void tick(float delta);
+	enum state { Tpose, Idle, Walk, Jump };
+
+	state m_lastState = state::Idle;
+	state m_currentState = state::Idle;
+	state m_futureState = state::Idle;
+	void tick(float delta, float totalTime);
 	void transition_state(state toState, bool playWhole, std::shared_ptr<eeng::RenderableMesh> resource);
+	FSM() {};
+	~FSM() {};
 };
