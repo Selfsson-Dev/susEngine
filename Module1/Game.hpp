@@ -137,7 +137,7 @@ private:
 
     void movement_system(float deltaTime);
 
-    void player_controller_system(InputManagerPtr input);
+    void player_controller_system(InputManagerPtr input, float deltaTime);
 
     void render_system(float time);
 

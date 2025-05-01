@@ -81,7 +81,7 @@ void Game::update(
     float deltaTime,
     InputManagerPtr input)
 {
-    player_controller_system(input);
+    player_controller_system(input, deltaTime);
     updateCamera(input);
     NPC_controller_system();
 
@@ -225,6 +225,8 @@ void Game::renderUI()
         ImGui::Text("Player pos: %f %f %f", tfm.pos.x, tfm.pos.y, tfm.pos.z);
         ImGui::SliderFloat("Player movespeed", &pcc.moveSpeed, 0.0f, 50.0f);
         //ImGui::SliderInt("Player animation state", &pcc.animationState, 0, 2); // overrided anyway by pc system
+        ImGui::Text("isJumping: %i", pcc.isJumping);
+        ImGui::Text("jumpTimer: %f", pcc.jumpTimer);
     }
     /*
             if (ImGui::Button("Button"))
@@ -325,13 +327,14 @@ void Game::movement_system(float deltaTime)
     }
 }
 
-void Game::player_controller_system(InputManagerPtr input) {
+void Game::player_controller_system(InputManagerPtr input, float deltaTime) {
     // get input
     using Key = eeng::InputManager::Key;
     bool W = input->IsKeyPressed(Key::W);
     bool A = input->IsKeyPressed(Key::A);
     bool S = input->IsKeyPressed(Key::S);
     bool D = input->IsKeyPressed(Key::D);
+    bool spaceIsPressed = input->IsKeyPressed(Key::Space);
 
     //W = true;
 
@@ -360,6 +363,21 @@ void Game::player_controller_system(InputManagerPtr input) {
     for (auto [entity, tfm, vel, player, anim, mesh] : view.each()) {
         //eeng::Log("normalized dir is: %f %f %f" , dirNorm.x, dirNorm.y, dirNorm.z);
 
+        if (spaceIsPressed && player.jumpTimer <= player.jumpDuration) {
+            player.isJumping = true;
+        }
+
+        if (player.jumpTimer >= player.jumpDuration) {
+            player.isJumping = false;
+        }
+
+        if (player.isJumping) {
+            player.jumpTimer += deltaTime;
+        }
+        else {
+            player.jumpTimer = 0.0f;
+        }
+
         vel.velocity = dirNorm * player.moveSpeed;
 
         camera.lookAt = tfm.pos;
@@ -373,11 +391,17 @@ void Game::player_controller_system(InputManagerPtr input) {
         //else {
         //    anim.characterAnimIndex = 2;
         //}
-
-        if (glm::length(dir) > 0) {
+        if (player.isJumping) {
+            int animIndex = static_cast<int>(player.Jump);
+            fsm.transition_state(FSM::state::Jump, true, mesh.resource, player.jumpDuration);
+            continue;
+        }
+        else if (glm::length(dir) > 0) {
+            int animIndex = static_cast<int>(player.Walk);
             fsm.transition_state(FSM::state::Walk, false, mesh.resource);
         }
         else {
+            int animIndex = static_cast<int>(player.Jump);
             fsm.transition_state(FSM::state::Idle, false, mesh.resource);
             continue;
         }
@@ -385,8 +409,8 @@ void Game::player_controller_system(InputManagerPtr input) {
         glm::vec3 modelFwd = glm::vec3(0, 0, 1);
         float d = glm::dot(modelFwd, dirNorm);
 
-        if (d < -0.9999f) {
-            // Opposite direction, rotate 180 degrees around some perpendicular axis
+        if (d < -0.9999f) {            // Opposite direction, rotate 180 degrees around some perpendicular axis
+
             tfm.rot = glm::angleAxis(glm::pi<float>(), glm::vec3(0, 1, 0));
         }
         else if (d > 0.9999f) {

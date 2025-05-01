@@ -9,7 +9,11 @@ struct LinearVelocityComponent {
 struct PlayerControllerComponent {
     float moveSpeed;
     float jumpForce;
-    int animationState;
+    bool isJumping;
+    float jumpDuration;
+    float jumpTimer;
+
+    enum state { Tpose, Idle, Walk, Jump };
 };
 
 struct NPCControllerComponent {
