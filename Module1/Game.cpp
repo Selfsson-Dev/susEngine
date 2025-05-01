@@ -7,6 +7,7 @@
 #include "Game.hpp"
 #include "GameComponents.hpp"
 #include "EngineComponents.hpp"
+#include "FSM.h"
 
 bool Game::init()
 {
@@ -84,8 +85,11 @@ void Game::update(
     NPC_controller_system();
 
     movement_system(deltaTime);
+    fsm.tick(deltaTime);
 
+    //FSM_system(deltaTime, time);
     //updatePlayer(deltaTime, input);
+
 
     pointlight.pos = glm::vec3(
         glm_aux::R(time * 0.1f, { 0.0f, 1.0f, 0.0f }) *
@@ -141,6 +145,8 @@ void Game::render(
     //horse_aabb = horseMesh->m_model_aabb.post_transform(horseWorldMatrix);
     render_system(time);
 
+    BONEGIZMO();
+
     //// Character, instance 1
     //characterMesh->animate(characterAnimIndex, time * characterAnimSpeed);
     ////forwardRenderer->renderMesh(characterMesh, characterWorldMatrix1);
@@ -174,11 +180,11 @@ void Game::render(
 
     // Draw object bases
     {
-        shapeRenderer->push_basis_basic(characterWorldMatrix1, 1.0f);
-        shapeRenderer->push_basis_basic(characterWorldMatrix2, 1.0f);
-        shapeRenderer->push_basis_basic(characterWorldMatrix3, 1.0f);
-        shapeRenderer->push_basis_basic(grassWorldMatrix, 1.0f);
-        shapeRenderer->push_basis_basic(horseWorldMatrix, 1.0f);
+        //shapeRenderer->push_basis_basic(characterWorldMatrix1, 1.0f);
+        //shapeRenderer->push_basis_basic(characterWorldMatrix2, 1.0f);
+        //shapeRenderer->push_basis_basic(characterWorldMatrix3, 1.0f);
+        //shapeRenderer->push_basis_basic(grassWorldMatrix, 1.0f);
+        //shapeRenderer->push_basis_basic(horseWorldMatrix, 1.0f);
     }
 
     // Draw AABBs
@@ -394,10 +400,18 @@ void Game::player_controller_system(InputManagerPtr input) {
 // Logic to render all meshes with MeshComponent
 void Game::render_system(float time) {
     auto animView = entity_registry->view<AnimationComponent, MeshComponent>();
+    static float blendingAmount = 0.0f;
+    static int animationState = 0;
+    ImGui::Begin("animation blending...");
+    ImGui::SliderFloat("blending", &blendingAmount, 0.0f, 1.0f);
+    ImGui::SliderInt("animation state", &animationState, 0, 10);
+    ImGui::End();
 
-    for (auto [entity, animation, mesh] : animView.each()) {
-        mesh.resource->animate(animation.characterAnimIndex, animation.characterAnimSpeed * time);
-    }
+    //for (auto [entity, animation, mesh] : animView.each()) {
+    //   mesh.resource->animate(animationState, animation.characterAnimSpeed * time);
+    //    //mesh.resource->animateBlend()
+    //   mesh.resource->animateBlend(0, animationState, animation.characterAnimSpeed * time, animation.characterAnimSpeed * time, blendingAmount);
+    //}
 
     auto view = entity_registry->view<TransformComponent, MeshComponent>();
 
@@ -410,8 +424,6 @@ void Game::render_system(float time) {
         forwardRenderer->renderMesh(mesh.resource, tfm.worldMatrix);
         //horse_aabb = mesh.resource->m_model_aabb.post_transform(tfm.worldMatrix);
     }
-
-
 }
 
 void Game::NPC_controller_system() {
@@ -467,3 +479,189 @@ void Game::NPC_controller_system() {
         }
     }
 }
+
+void Game::BONEGIZMO()
+{
+    bool drawSkeleton = true;
+    float axisLen = 25.0f;
+
+    auto view = entity_registry->view<PlayerControllerComponent, MeshComponent, TransformComponent>();
+
+    for(auto [entity, pcc, mesh, tfm] : view.each())
+
+    if (drawSkeleton) {
+        for (int i = 0; i < mesh.resource->boneMatrices.size(); ++i) {
+            auto IBinverse = glm::inverse(mesh.resource->m_bones[i].inversebind_tfm);
+            glm::mat4 global = tfm.worldMatrix * mesh.resource->boneMatrices[i] * IBinverse;
+            glm::vec3 pos = glm::vec3(global[3]);
+
+            glm::vec3 right = glm::vec3(global[0]); // X
+            glm::vec3 up = glm::vec3(global[1]); // Y
+            glm::vec3 fwd = glm::vec3(global[2]); // Z
+
+            shapeRenderer->push_states(ShapeRendering::Color4u::Red);
+            shapeRenderer->push_line(pos, pos + axisLen * right);
+
+            shapeRenderer->push_states(ShapeRendering::Color4u::Green);
+            shapeRenderer->push_line(pos, pos + axisLen * up);
+
+            shapeRenderer->push_states(ShapeRendering::Color4u::Blue);
+            shapeRenderer->push_line(pos, pos + axisLen * fwd);
+
+            shapeRenderer->pop_states<ShapeRendering::Color4u>();
+            shapeRenderer->pop_states<ShapeRendering::Color4u>();
+            shapeRenderer->pop_states<ShapeRendering::Color4u>();
+        }
+    }
+}
+
+enum state{Tpose, Idle, Walk, Jump};
+
+float blending = 0.0f;
+bool transitionDone = false;
+
+state originState = state::Idle;
+state goalState = state::Idle;
+
+void Game::FSM_system(float delta, float time)
+{
+    static float timer = 0.0f;
+    timer += delta;
+
+    auto view = entity_registry->view<PlayerControllerComponent, TransformComponent, LinearVelocityComponent, MeshComponent, AnimationComponent>();
+
+    for (auto [entity, pcc, tfm, vel, mesh, animation] : view.each())
+    {
+        /*
+            set states
+
+            if states are the same
+                check if we need to reverse states
+
+            tick blending forward or backwards
+            clamp blending 
+
+            check if transition is done
+
+            if done set both to the same
+            else do the interpolation
+        */
+        if (glm::length(vel.velocity) > 0.0f)
+        {
+            goalState = state::Walk;
+        }
+        else {
+            goalState = state::Idle;
+        }
+
+        if (goalState == originState) {
+            // 2. If states are the same:
+            //    - You might be reverting a transition (cancelled input, etc.)
+            if (!transitionDone) {
+                blending -= delta * 4;
+            }
+            else {
+                blending = 0.0f;
+            }
+        }
+        else {
+            // 3. New state detected — begin or continue blending toward it
+            blending += delta * 4;
+        }
+
+        // 4. Clamp blending to [0.0, 1.0]
+        blending = std::clamp(blending, 0.0f, 1.0f);
+
+        // 5. Check if transition is complete
+        if (blending >= 1.0f) {
+            // Fully transitioned to new state
+            originState = goalState;
+            transitionDone = true;
+        }
+        else if (blending <= 0.0f) {
+            // Fully reverted to old state
+            goalState = originState;
+            transitionDone = true;
+        }
+        else {
+            // 6. Still transitioning — perform blend
+            int lastAnimation = static_cast<int>(originState);
+            int goalAnimation = static_cast<int>(goalState);
+
+            mesh.resource->animateBlend(
+                lastAnimation, goalAnimation,
+                animation.characterAnimSpeed * time,
+                animation.characterAnimSpeed * time,
+                blending);
+            transitionDone = false; 
+        }
+
+        if (transitionDone) {
+            blending = 0.0f;
+        }
+    }
+}
+
+/*
+
+        if (currentState == lastState) {
+            if (!transitionDone) {
+                blending -= delta;
+            }
+            else {
+                blending += delta;
+            }
+            eeng::Log("states are the same!!");
+        }
+        else {
+            blending += delta;
+        }
+
+        blending = glm::clamp(blending, 0.0f, 1.0f);
+
+        if (glm::length(vel.velocity) > 0.0f)
+        {
+            currentState = state::Walk;
+        }
+        else {
+            currentState = state::Idle;
+        }
+
+
+
+        int lastAnimation = static_cast<int>(lastState);
+        int goalAnimation = static_cast<int>(currentState);
+
+        //if (timer >= 1.0f) {
+        //    timer = 0.0f;
+
+        //    eeng::Log("");
+        //    eeng::Log("");
+
+        //    eeng::Log("vel speed: %f", glm::length(vel.velocity));
+        //    eeng::Log("current blending : %f", blending);
+        //    eeng::Log("lastAnimation: %i", lastAnimation);
+        //    eeng::Log("goalAnimation: %i", goalAnimation);
+
+        //    eeng::Log("");
+        //    eeng::Log("");
+        //}
+
+        if (blending >= 1.0f) {
+            lastState = currentState;
+            transitionDone = true;
+        }
+        else if (blending <= 0.0f) {
+            // Fully reverted to lastState
+            //lastState = currentState;
+            transitionDone = true;
+        }
+        else
+        {
+            mesh.resource->animateBlend(lastAnimation, goalAnimation,
+                                        animation.characterAnimSpeed * time,
+                                        animation.characterAnimSpeed * time,
+                                        blending);
+            transitionDone = false;
+        }
+*/

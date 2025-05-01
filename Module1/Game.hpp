@@ -54,6 +54,8 @@ private:
     
     InstanceCreator instanceCreator;
 
+    FSM fsm;
+
     // Matrices for view, projection and viewport
     struct Matrices
     {
@@ -101,15 +103,15 @@ private:
     } player;
 
     // Game meshes
-    std::shared_ptr<eeng::RenderableMesh> grassMesh;
-    std::shared_ptr<eeng::RenderableMesh> horseMesh;
-    std::shared_ptr<eeng::RenderableMesh> characterMesh;
+    //std::shared_ptr<eeng::RenderableMesh> grassMesh;
+    //std::shared_ptr<eeng::RenderableMesh> horseMesh;
+    //std::shared_ptr<eeng::RenderableMesh> characterMesh;
 
     // Game entity transformations
-    glm::mat4 characterWorldMatrix1;
-    glm::mat4 characterWorldMatrix2;
-    glm::mat4 characterWorldMatrix3;
-    glm::mat4 grassWorldMatrix, horseWorldMatrix;
+    //glm::mat4 characterWorldMatrix1;
+    //glm::mat4 characterWorldMatrix2;
+    //glm::mat4 characterWorldMatrix3;
+    //glm::mat4 grassWorldMatrix, horseWorldMatrix;
 
     // Game entity AABBs (for collision detection or visualization)
     eeng::AABB character_aabb1, character_aabb2, character_aabb3, horse_aabb, grass_aabb;
@@ -139,6 +141,10 @@ private:
     void render_system(float time);
 
     void NPC_controller_system();
+
+    void BONEGIZMO();
+
+    void FSM_system(float delta, float time);
 };
 
 #endif

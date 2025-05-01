@@ -41,6 +41,8 @@ void InstanceCreator::create_player(glm::vec3 spawn)
 	playerMesh.resource->load("assets/Amy/Ch46_nonPBR.fbx");
 	playerMesh.resource->load("assets/Amy/idle.fbx", true);
 	playerMesh.resource->load("assets/Amy/walking.fbx", true);
+	playerMesh.resource->load("assets/Amy/jump.fbx", true);
+
 	// Remove root motion
 	playerMesh.resource->removeTranslationKeys("mixamorig:Hips");
 
