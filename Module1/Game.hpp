@@ -57,6 +57,8 @@ private:
 
     FSM fsm;
 
+    FSM fsmTest;
+
     // Matrices for view, projection and viewport
     struct Matrices
     {
@@ -108,6 +110,8 @@ private:
     //std::shared_ptr<eeng::RenderableMesh> horseMesh;
     //std::shared_ptr<eeng::RenderableMesh> characterMesh;
 
+    std::shared_ptr<eeng::RenderableMesh> blendMeshTester;
+
     // Game entity transformations
     //glm::mat4 characterWorldMatrix1;
     //glm::mat4 characterWorldMatrix2;
@@ -145,7 +149,9 @@ private:
 
     void BONEGIZMO();
 
-    //void FSM_system(float delta, float time);
+    void blend_test(float time);
+
+    void FSM_system(float delta, float time);
 };
 
 #endif

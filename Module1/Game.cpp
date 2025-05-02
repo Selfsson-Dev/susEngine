@@ -23,6 +23,7 @@ bool Game::init()
 
     instanceCreator = InstanceCreator(entity_registry);
     fsm = FSM();
+    fsmTest = FSM();
 
     instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::PLAYER);
     instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::GRASS, glm_aux::vec3_000);
@@ -30,7 +31,37 @@ bool Game::init()
     //instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::NPC);
     //instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::NPC);
 
-    // Character
+    blendMeshTester = std::make_shared<eeng::RenderableMesh>();
+    blendMeshTester->load("assets/Amy/Ch46_nonPBR.fbx");
+    blendMeshTester->load("assets/Amy/idle.fbx", true);
+    blendMeshTester->load("assets/Amy/walking.fbx", true);
+    blendMeshTester->removeTranslationKeys("mixamorig:Hips");
+
+
+
+    TransformComponent tfm{ glm::vec3(5.0f, 0.0f, 0.0f),                                             // translation
+                        glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),   // rot to quat
+                        glm::vec3(0.03f) };                                                // scale
+
+
+    LinearVelocityComponent vel{ glm::vec3(0.0f, 0.0f, 0.0f) };
+
+    MeshComponent testMesh{};
+    testMesh.resource = std::make_shared<eeng::RenderableMesh>();
+    testMesh.resource->load("assets/Amy/Ch46_nonPBR.fbx");
+    testMesh.resource->load("assets/Amy/idle.fbx", true);
+    testMesh.resource->load("assets/Amy/walking.fbx", true);
+    testMesh.resource->removeTranslationKeys("mixamorig:Hips");
+
+    FSMComponent fsmc{};
+
+    auto test = entity_registry->create();
+
+    entity_registry->emplace<TransformComponent>(test, tfm);
+    entity_registry->emplace<LinearVelocityComponent>(test, vel);
+    entity_registry->emplace<MeshComponent>(test, testMesh);
+    entity_registry->emplace<FSMComponent>(test, fsmc);
+
     //characterMesh = std::make_shared<eeng::RenderableMesh>();
 #if 0
     // Character
@@ -87,8 +118,9 @@ void Game::update(
 
     movement_system(deltaTime);
     fsm.tick(deltaTime, time);
+    fsmTest.tick(deltaTime, time);
 
-    //FSM_system(deltaTime, time);
+    FSM_system(deltaTime, time);
     //updatePlayer(deltaTime, input);
 
 
@@ -146,11 +178,20 @@ void Game::render(
     //horse_aabb = horseMesh->m_model_aabb.post_transform(horseWorldMatrix);
     render_system(time);
 
-    BONEGIZMO();
+    static bool showBone = false;
 
-    //// Character, instance 1
-    //characterMesh->animate(characterAnimIndex, time * characterAnimSpeed);
-    ////forwardRenderer->renderMesh(characterMesh, characterWorldMatrix1);
+    ImGui::Begin("BoneTester");
+    if (ImGui::Button("Show bones")) {
+        showBone = !showBone;
+    }
+    if (showBone) {
+        BONEGIZMO();
+    }
+    ImGui::End();
+
+    blend_test(time);
+
+    // Character, instance 1
     //character_aabb1 = characterMesh->m_model_aabb.post_transform(characterWorldMatrix1);
 
     //// Character, instance 2
@@ -526,7 +567,7 @@ void Game::BONEGIZMO()
         for (int i = 0; i < mesh.resource->boneMatrices.size(); ++i) {
             auto IBinverse = glm::inverse(mesh.resource->m_bones[i].inversebind_tfm);
             glm::mat4 global = tfm.worldMatrix * mesh.resource->boneMatrices[i] * IBinverse;
-            glm::vec3 pos = glm::vec3(global[3]);
+            glm::vec3 pos = glm::vec3(global[3]); 
 
             glm::vec3 right = glm::vec3(global[0]); // X
             glm::vec3 up = glm::vec3(global[1]); // Y
@@ -547,6 +588,48 @@ void Game::BONEGIZMO()
         }
     }
 }
+
+
+static float blendFactor = 0.0f;
+
+
+void Game::blend_test(float time)
+{
+    glm::mat4 characterWorldMatrix1 = glm_aux::TRS(
+    { 0.0f, 0.0f, 0.0f },
+    0.0f, { 0, 1, 0 },
+    { 0.01f, 0.01f, 0.01f });
+
+    ImGui::Begin("Blend tester");
+    ImGui::SliderFloat("Blend Factor", &blendFactor, 0.0f, 1.0f);
+    blendMeshTester->animateBlend(1, 2, time, time, blendFactor);
+    forwardRenderer->renderMesh(blendMeshTester, characterWorldMatrix1);
+
+    ImGui::End();
+}
+
+void Game::FSM_system(float delta, float time)
+{
+    auto view = entity_registry->view<TransformComponent, MeshComponent, FSMComponent>();
+
+    for (auto [entity, tfm, mesh, fsmc] : view.each()) {
+        fsmc.timer += delta;
+
+        if (fsmc.timer <= fsmc.cooldown) {
+            fsmTest.transition_state(fsmc.currentIndex, false, mesh.resource);
+        }
+        else {
+            fsmc.timer = 0.0f;
+            fsmc.currentIndex = rand() % mesh.resource->getNbrAnimations();
+        }
+
+        ImGui::Begin("Debug for tester");
+        ImGui::Text("timer for change : %f", fsmc.timer);
+        ImGui::End();
+    }
+}
+
+
 /*
 enum state{Tpose, Idle, Walk, Jump};
 
@@ -571,7 +654,7 @@ void Game::FSM_system(float delta, float time)
                 check if we need to reverse states
 
             tick blending forward or backwards
-            clamp blending 
+            clamp blending
 
             check if transition is done
 
@@ -625,7 +708,7 @@ void Game::FSM_system(float delta, float time)
                 animation.characterAnimSpeed * time,
                 animation.characterAnimSpeed * time,
                 blending);
-            transitionDone = false; 
+            transitionDone = false;
         }
 
         if (transitionDone) {

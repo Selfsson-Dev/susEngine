@@ -27,3 +27,9 @@ struct AnimationComponent {
     int characterAnimIndex = -1;
     float characterAnimSpeed = 1.0f;
 };
+
+struct FSMComponent {
+    float cooldown = 4.0f;
+    float timer = 0.0f;
+    int currentIndex = 0;
+};

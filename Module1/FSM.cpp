@@ -73,7 +73,7 @@ void FSM::transition_state(int toAnimIndex, bool playWholeClip, std::shared_ptr<
 			currentAnimationTimer = 0.0f;
 		}
 
-		animate_whole_clip(toAnimIndex, resource);
+		animate_whole_clip(clipAnimIndex, resource);
 		return; // ignore rest
 	}
 

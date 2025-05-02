@@ -17,8 +17,8 @@ private:
 
 	// time
 	float currentTime = 0.0f;
-	float currentAnimationTimer;
-	float speedMarkiplier;
+	float currentAnimationTimer = 0.0f;
+	float speedMarkiplier = 1.0f;
 
 	void animate_whole_clip(int animIndex, std::shared_ptr<eeng::RenderableMesh> resource);
 
