@@ -4,6 +4,7 @@
 
 struct LinearVelocityComponent {
     glm::vec3 velocity;
+    glm::vec3 dirNorm;
 };
 
 struct PlayerControllerComponent {

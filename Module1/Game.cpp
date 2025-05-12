@@ -28,81 +28,6 @@ bool Game::init()
     instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::PLAYER);
     instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::GRASS, glm_aux::vec3_000);
     instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::NPC);
-    //instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::NPC);
-    //instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::NPC);
-
-    blendMeshTester = std::make_shared<eeng::RenderableMesh>();
-    blendMeshTester->load("assets/Amy/Ch46_nonPBR.fbx");
-    blendMeshTester->load("assets/Amy/idle.fbx", true);
-    blendMeshTester->load("assets/Amy/walking.fbx", true);
-    blendMeshTester->removeTranslationKeys("mixamorig:Hips");
-
-
-
-    TransformComponent tfm{ glm::vec3(5.0f, 0.0f, 0.0f),                                             // translation
-                        glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),   // rot to quat
-                        glm::vec3(0.03f) };                                                // scale
-
-
-    LinearVelocityComponent vel{ glm::vec3(0.0f, 0.0f, 0.0f) };
-
-    MeshComponent testMesh{};
-    testMesh.resource = std::make_shared<eeng::RenderableMesh>();
-    testMesh.resource->load("assets/Amy/Ch46_nonPBR.fbx");
-    testMesh.resource->load("assets/Amy/idle.fbx", true);
-    testMesh.resource->load("assets/Amy/walking.fbx", true);
-    testMesh.resource->removeTranslationKeys("mixamorig:Hips");
-
-    FSMComponent fsmc{};
-
-    auto test = entity_registry->create();
-
-    entity_registry->emplace<TransformComponent>(test, tfm);
-    entity_registry->emplace<LinearVelocityComponent>(test, vel);
-    entity_registry->emplace<MeshComponent>(test, testMesh);
-    entity_registry->emplace<FSMComponent>(test, fsmc);
-
-    //characterMesh = std::make_shared<eeng::RenderableMesh>();
-#if 0
-    // Character
-    characterMesh->load("assets/Ultimate Platformer Pack/Character/Character.fbx", false);
-#endif
-#if 0
-    // Enemy
-    characterMesh->load("assets/Ultimate Platformer Pack/Enemies/Bee.fbx", false);
-#endif
-#if 0
-    // ExoRed 5.0.1 PACK FBX, 60fps, No keyframe reduction
-    characterMesh->load("assets/ExoRed/exo_red.fbx");
-    characterMesh->load("assets/ExoRed/idle (2).fbx", true);
-    characterMesh->load("assets/ExoRed/walking.fbx", true);
-    // Remove root motion
-    characterMesh->removeTranslationKeys("mixamorig:Hips");
-#endif
-#if 1
-    // Amy 5.0.1 PACK FBX
-    //characterMesh->load("assets/Amy/Ch46_nonPBR.fbx");
-    //characterMesh->load("assets/Amy/idle.fbx", true);
-    //characterMesh->load("assets/Amy/walking.fbx", true);
-    //// Remove root motion
-    //characterMesh->removeTranslationKeys("mixamorig:Hips");
-#endif
-#if 0
-    // Eve 5.0.1 PACK FBX
-    // Fix for assimp 5.0.1 (https://github.com/assimp/assimp/issues/4486)
-    // FBXConverter.cpp, line 648: 
-    //      const float zero_epsilon = 1e-6f; => const float zero_epsilon = Math::getEpsilon<float>();
-    characterMesh->load("assets/Eve/Eve By J.Gonzales.fbx");
-    characterMesh->load("assets/Eve/idle.fbx", true);
-    characterMesh->load("assets/Eve/walking.fbx", true);
-    // Remove root motion
-    characterMesh->removeTranslationKeys("mixamorig:Hips");
-#endif
-
-    //grassWorldMatrix = glm_aux::TRS(
-    //    { 0.0f, 0.0f, 0.0f },
-    //    0.0f, { 0, 1, 0 },
-    //    { 100.0f, 100.0f, 100.0f });
 
     return true;
 }
@@ -123,28 +48,9 @@ void Game::update(
     FSM_system(deltaTime, time);
     //updatePlayer(deltaTime, input);
 
-
     pointlight.pos = glm::vec3(
         glm_aux::R(time * 0.1f, { 0.0f, 1.0f, 0.0f }) *
         glm::vec4(100.0f, 100.0f, 100.0f, 1.0f));
-
-    // Intersect player view ray with AABBs of other objects 
-    glm_aux::intersect_ray_AABB(player.viewRay, character_aabb2.min, character_aabb2.max);
-    glm_aux::intersect_ray_AABB(player.viewRay, character_aabb3.min, character_aabb3.max);
-    glm_aux::intersect_ray_AABB(player.viewRay, horse_aabb.min, horse_aabb.max);
-
-    // We can also compute a ray from the current mouse position,
-    // to use for object picking and such ...
-    if (input->GetMouseState().rightButton)
-    {
-        glm::ivec2 windowPos(camera.mouse_xy_prev.x, matrices.windowSize.y - camera.mouse_xy_prev.y);
-        auto ray = glm_aux::world_ray_from_window_coords(windowPos, matrices.V, matrices.P, matrices.VP);
-        // Intersect with e.g. AABBs ...
-
-        eeng::Log("Picking ray origin = %s, dir = %s",
-            glm_aux::to_string(ray.origin).c_str(),
-            glm_aux::to_string(ray.dir).c_str());
-    }
 }
 
 void Game::render(
@@ -162,20 +68,11 @@ void Game::render(
 
     // View matrix
     matrices.V = glm::lookAt(camera.pos, camera.lookAt, camera.up);
-
     matrices.VP = glm_aux::create_viewport_matrix(0.0f, 0.0f, windowWidth, windowHeight, 0.0f, 1.0f);
 
     // Begin rendering pass
     forwardRenderer->beginPass(matrices.P, matrices.V, pointlight.pos, pointlight.color, camera.pos);
 
-    // Grass
-    //forwardRenderer->renderMesh(grassMesh, grassWorldMatrix);
-    //grass_aabb = grassMesh->m_model_aabb.post_transform(grassWorldMatrix);
-
-    // Horse
-    //horseMesh->animate(3, time);
-    //forwardRenderer->renderMesh(horseMesh, horseWorldMatrix);
-    //horse_aabb = horseMesh->m_model_aabb.post_transform(horseWorldMatrix);
     render_system(time);
 
     static bool showBone = false;
@@ -189,67 +86,19 @@ void Game::render(
     }
     ImGui::End();
 
-    blend_test(time);
-
-    // Character, instance 1
-    //character_aabb1 = characterMesh->m_model_aabb.post_transform(characterWorldMatrix1);
-
-    //// Character, instance 2
-    //characterMesh->animate(1, time * characterAnimSpeed);
-    //forwardRenderer->renderMesh(characterMesh, characterWorldMatrix2);
-    //character_aabb2 = characterMesh->m_model_aabb.post_transform(characterWorldMatrix2);
-
-    //// Character, instance 3
-    //characterMesh->animate(2, time * characterAnimSpeed);
-    //forwardRenderer->renderMesh(characterMesh, characterWorldMatrix3);
-    //character_aabb3 = characterMesh->m_model_aabb.post_transform(characterWorldMatrix3);
-
     // End rendering pass
     drawcallCount = forwardRenderer->endPass();
 
-    // Draw player view ray
-    if (player.viewRay)
-    {
-        shapeRenderer->push_states(ShapeRendering::Color4u{ 0xff00ff00 });
-        shapeRenderer->push_line(player.viewRay.origin, player.viewRay.point_of_contact());
-    }
-    else
-    {
-        shapeRenderer->push_states(ShapeRendering::Color4u{ 0xffffffff });
-        shapeRenderer->push_line(player.viewRay.origin, player.viewRay.origin + player.viewRay.dir * 100.0f);
-    }
+    shapeRenderer->push_states(ShapeRendering::Color4u{ 0xFFE61A80 });
+    shapeRenderer->push_AABB(character_aabb1.min, character_aabb1.max);
+    shapeRenderer->push_AABB(character_aabb2.min, character_aabb2.max);
+    shapeRenderer->push_AABB(character_aabb3.min, character_aabb3.max);
+    shapeRenderer->push_AABB(horse_aabb.min, horse_aabb.max);
+    shapeRenderer->push_AABB(grass_aabb.min, grass_aabb.max);
     shapeRenderer->pop_states<ShapeRendering::Color4u>();
 
-    // Draw object bases
-    {
-        //shapeRenderer->push_basis_basic(characterWorldMatrix1, 1.0f);
-        //shapeRenderer->push_basis_basic(characterWorldMatrix2, 1.0f);
-        //shapeRenderer->push_basis_basic(characterWorldMatrix3, 1.0f);
-        //shapeRenderer->push_basis_basic(grassWorldMatrix, 1.0f);
-        //shapeRenderer->push_basis_basic(horseWorldMatrix, 1.0f);
-    }
-
-    // Draw AABBs
-    {
-        shapeRenderer->push_states(ShapeRendering::Color4u{ 0xFFE61A80 });
-        shapeRenderer->push_AABB(character_aabb1.min, character_aabb1.max);
-        shapeRenderer->push_AABB(character_aabb2.min, character_aabb2.max);
-        shapeRenderer->push_AABB(character_aabb3.min, character_aabb3.max);
-        shapeRenderer->push_AABB(horse_aabb.min, horse_aabb.max);
-        shapeRenderer->push_AABB(grass_aabb.min, grass_aabb.max);
-        shapeRenderer->pop_states<ShapeRendering::Color4u>();
-    }
-
-#if 0
-    // Demo draw other shapes
-    {
-        shapeRenderer->push_states(glm_aux::T(glm::vec3(0.0f, 0.0f, -5.0f)));
-        ShapeRendering::DemoDraw(shapeRenderer);
-        shapeRenderer->pop_states<glm::mat4>();
-    }
-#endif
-
-    // Draw shape batches
+//    // Draw shape batches
+    // magically depends on above for some reason
     shapeRenderer->render(matrices.P * matrices.V);
     shapeRenderer->post_render();
 }
@@ -269,17 +118,7 @@ void Game::renderUI()
         ImGui::Text("isJumping: %i", pcc.isJumping);
         ImGui::Text("jumpTimer: %f", pcc.jumpTimer);
     }
-    /*
-            if (ImGui::Button("Button"))
-    static float vec4a[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
-    ImGui::InputFloat3("input float3", vec4a);
 
-    const char* items[] = { "AAAA", "BBBB", "CCCC", "DDDD", "EEEE", "FFFF", "GGGG", "HHHH", "IIIIIII", "JJJJ", "KKKKKKK" };
-            static int item_current = 0;
-            ImGui::Combo("combo", &item_current, items, IM_ARRAYSIZE(items));
-
-
-    */
     const char* items[] = { "NPC", "HORSE", "PLAYER", "GRASS"};
     static int item_current = 0;
     ImGui::SeparatorText("Spawner");
@@ -345,25 +184,28 @@ void Game::movement_system(float deltaTime)
 {
     auto view = entity_registry->view<TransformComponent, LinearVelocityComponent>();
 
-    //for (auto entity : view) {
-    //    auto &vel = view.get< LinearVelocityComponent
-    //}
-
     for (auto [entity, tfm, vel] : view.each()) {
-        // identity
+
         glm::mat4 _matrix(1.0f);
 
-        // translation
         tfm.pos += vel.velocity * deltaTime;
 
-        // rotation is set in other systems
-        //tfm.rot = glm::angleAxis(glm::radians(rotation), glm::vec3(0.0f, 1.0f, 0.0f));
-        
-        // scale is only set in init as is now, can be updated whenever
+        glm::vec3 modelFwd = glm::vec3(0, 0, 1);
+        float d = glm::dot(modelFwd, vel.dirNorm);
 
-        // update matrix
-        // glm_aux::trs only accepts rotation around specific axis
-        // we want to use quaternions here! make everything a mat4... and do trs manually, rip simd instruction..
+        if (d < -0.9999f) {
+
+            tfm.rot = glm::angleAxis(glm::pi<float>(), glm::vec3(0, 1, 0));
+        }
+        else if (d > 0.9999f) {
+            tfm.rot = glm::quat(1, 0, 0, 0);
+        }
+        else {
+            glm::vec3 axis = glm::normalize(glm::cross(modelFwd, vel.dirNorm));
+            float angle = acos(d);
+            tfm.rot = glm::angleAxis(angle, axis);
+        }
+
         tfm.worldMatrix = glm::translate(_matrix, tfm.pos) * glm::mat4_cast(tfm.rot) * glm::scale(_matrix, tfm.scale);
     }
 }
@@ -394,13 +236,9 @@ void Game::player_controller_system(InputManagerPtr input, float deltaTime) {
     else {
         dirNorm = glm::normalize(dir);
     }
-        
-
+       
     auto view = entity_registry->view<TransformComponent, LinearVelocityComponent, PlayerControllerComponent, AnimationComponent, MeshComponent>();
 
-    // velocity = dir * speed;
-    // set velocity
-    // seperate into xz and y planes to get jump also
     for (auto [entity, tfm, vel, player, anim, mesh] : view.each()) {
         //eeng::Log("normalized dir is: %f %f %f" , dirNorm.x, dirNorm.y, dirNorm.z);
 
@@ -424,14 +262,6 @@ void Game::player_controller_system(InputManagerPtr input, float deltaTime) {
         camera.lookAt = tfm.pos;
         camera.pos = tfm.pos;
 
-        // only rotate if we actually move
-        //if (!glm::length(dir) > 0) {
-        //    anim.characterAnimIndex = 1;
-        //    continue;
-        //}
-        //else {
-        //    anim.characterAnimIndex = 2;
-        //}
         if (player.isJumping) {
             int animIndex = static_cast<int>(player.Jump);
             fsm.transition_state(animIndex, true, mesh.resource, player.jumpDuration);
@@ -446,29 +276,12 @@ void Game::player_controller_system(InputManagerPtr input, float deltaTime) {
             fsm.transition_state(animIndex, false, mesh.resource, 1.0f);
             continue;
         }
-
-        glm::vec3 modelFwd = glm::vec3(0, 0, 1);
-        float d = glm::dot(modelFwd, dirNorm);
-
-        if (d < -0.9999f) {            // Opposite direction, rotate 180 degrees around some perpendicular axis
-
-            tfm.rot = glm::angleAxis(glm::pi<float>(), glm::vec3(0, 1, 0));
-        }
-        else if (d > 0.9999f) {
-            // Same direction, no rotation needed
-            tfm.rot = glm::quat(1, 0, 0, 0);
-        }
-        else {
-            glm::vec3 axis = glm::normalize(glm::cross(modelFwd, dirNorm));
-            float angle = acos(d);
-            tfm.rot = glm::angleAxis(angle, axis);
+        if (!glm::length(dir) > 0.0f) {
+            continue;
         }
 
+        vel.dirNorm = dirNorm;
     }
-
-    // jump??
-
-    // animation??
 }
 
 // Logic to render all meshes with MeshComponent
@@ -476,33 +289,15 @@ void Game::render_system(float time) {
     auto animView = entity_registry->view<AnimationComponent, MeshComponent>();
     static float blendingAmount = 0.0f;
     static int animationState = 0;
-    //ImGui::Begin("animation blending...");
-    //ImGui::SliderFloat("blending", &blendingAmount, 0.0f, 1.0f);
-    //ImGui::SliderInt("animation state", &animationState, 0, 10);
-    //ImGui::End();
-
-    //for (auto [entity, animation, mesh] : animView.each()) {
-    //   mesh.resource->animate(animationState, animation.characterAnimSpeed * time);
-    //    //mesh.resource->animateBlend()
-    //   mesh.resource->animateBlend(0, animationState, animation.characterAnimSpeed * time, animation.characterAnimSpeed * time, blendingAmount);
-    //}
 
     auto view = entity_registry->view<TransformComponent, MeshComponent>();
 
     for (auto [entity, tfm, mesh] : view.each()) {
-
-        //forwardRenderer->renderMesh(horseMesh, horseWorldMatrix);
-        //horse_aabb = horseMesh->m_model_aabb.post_transform(horseWorldMatrix);
-        // animate da mesh!!
-        // render mesh (mesh, transfrom)
         forwardRenderer->renderMesh(mesh.resource, tfm.worldMatrix);
-        //horse_aabb = mesh.resource->m_model_aabb.post_transform(tfm.worldMatrix);
     }
 }
 
 void Game::NPC_controller_system() {
-    // point npc towards point
-    // set velocity towards point
     auto view = entity_registry->view<NPCControllerComponent, TransformComponent, LinearVelocityComponent>();
 
     for (auto [entity, npcc, tfm, vel] : view.each()) {
@@ -523,8 +318,6 @@ void Game::NPC_controller_system() {
 
         npcc.currentWaypoint = npcc.waypoints[npcc.waypointIndex];
 
-        //eeng::Log("npc currentway: %f %f %f", npcc.currentWaypoint.x, npcc.currentWaypoint.y, npcc.currentWaypoint.z);
-
         glm::vec3 dir = npcc.currentWaypoint - tfm.pos;
 
         vel.velocity = glm::normalize(dir) * npcc.moveSpeed;
@@ -533,24 +326,9 @@ void Game::NPC_controller_system() {
         if (!glm::length(dir) > 0.0f) {
             continue;
         }
-
-        glm::vec3 modelFwd = glm::vec3(0, 0, 1);
         glm::vec3 dirNorm = glm::normalize(dir);
-        float d = glm::dot(modelFwd, dirNorm);
 
-        if (d < -0.9999f) {
-            // Opposite direction, rotate 180 degrees around some perpendicular axis
-            tfm.rot = glm::angleAxis(glm::pi<float>(), glm::vec3(0, 1, 0));
-        }
-        else if (d > 0.9999f) {
-            // Same direction, no rotation needed
-            tfm.rot = glm::quat(1, 0, 0, 0);
-        }
-        else {
-            glm::vec3 axis = glm::normalize(glm::cross(modelFwd, dirNorm));
-            float angle = acos(d);
-            tfm.rot = glm::angleAxis(angle, axis);
-        }
+        vel.dirNorm = dirNorm;
     }
 }
 
@@ -589,25 +367,6 @@ void Game::BONEGIZMO()
     }
 }
 
-
-static float blendFactor = 0.0f;
-
-
-void Game::blend_test(float time)
-{
-    glm::mat4 characterWorldMatrix1 = glm_aux::TRS(
-    { 0.0f, 0.0f, 0.0f },
-    0.0f, { 0, 1, 0 },
-    { 0.01f, 0.01f, 0.01f });
-
-    ImGui::Begin("Blend tester");
-    ImGui::SliderFloat("Blend Factor", &blendFactor, 0.0f, 1.0f);
-    blendMeshTester->animateBlend(1, 2, time, time, blendFactor);
-    forwardRenderer->renderMesh(blendMeshTester, characterWorldMatrix1);
-
-    ImGui::End();
-}
-
 void Game::FSM_system(float delta, float time)
 {
     auto view = entity_registry->view<TransformComponent, MeshComponent, FSMComponent>();
@@ -628,155 +387,3 @@ void Game::FSM_system(float delta, float time)
         ImGui::End();
     }
 }
-
-
-/*
-enum state{Tpose, Idle, Walk, Jump};
-
-float blending = 0.0f;
-bool transitionDone = false;
-
-//state originState = state::Idle;
-//state goalState = state::Idle;
-
-void Game::FSM_system(float delta, float time)
-{
-    static float timer = 0.0f;
-    timer += delta;
-
-    auto view = entity_registry->view<PlayerControllerComponent, TransformComponent, LinearVelocityComponent, MeshComponent, AnimationComponent>();
-
-    for (auto [entity, pcc, tfm, vel, mesh, animation] : view.each())
-    {
-            set states
-
-            if states are the same
-                check if we need to reverse states
-
-            tick blending forward or backwards
-            clamp blending
-
-            check if transition is done
-
-            if done set both to the same
-            else do the interpolation
-
-        if (glm::length(vel.velocity) > 0.0f)
-        {
-            goalState = state::Walk;
-        }
-        else {
-            goalState = state::Idle;
-        }
-
-        if (goalState == originState) {
-            // 2. If states are the same:
-            //    - You might be reverting a transition (cancelled input, etc.)
-            if (!transitionDone) {
-                blending -= delta * 4;
-            }
-            else {
-                blending = 0.0f;
-            }
-        }
-        else {
-            // 3. New state detected — begin or continue blending toward it
-            blending += delta * 4;
-        }
-
-        // 4. Clamp blending to [0.0, 1.0]
-        blending = std::clamp(blending, 0.0f, 1.0f);
-
-        // 5. Check if transition is complete
-        if (blending >= 1.0f) {
-            // Fully transitioned to new state
-            originState = goalState;
-            transitionDone = true;
-        }
-        else if (blending <= 0.0f) {
-            // Fully reverted to old state
-            goalState = originState;
-            transitionDone = true;
-        }
-        else {
-            // 6. Still transitioning — perform blend
-            int lastAnimation = static_cast<int>(originState);
-            int goalAnimation = static_cast<int>(goalState);
-
-            mesh.resource->animateBlend(
-                lastAnimation, goalAnimation,
-                animation.characterAnimSpeed * time,
-                animation.characterAnimSpeed * time,
-                blending);
-            transitionDone = false;
-        }
-
-        if (transitionDone) {
-            blending = 0.0f;
-        }
-    }
-}
-*/
-/*
-
-        if (currentState == lastState) {
-            if (!transitionDone) {
-                blending -= delta;
-            }
-            else {
-                blending += delta;
-            }
-            eeng::Log("states are the same!!");
-        }
-        else {
-            blending += delta;
-        }
-
-        blending = glm::clamp(blending, 0.0f, 1.0f);
-
-        if (glm::length(vel.velocity) > 0.0f)
-        {
-            currentState = state::Walk;
-        }
-        else {
-            currentState = state::Idle;
-        }
-
-
-
-        int lastAnimation = static_cast<int>(lastState);
-        int goalAnimation = static_cast<int>(currentState);
-
-        //if (timer >= 1.0f) {
-        //    timer = 0.0f;
-
-        //    eeng::Log("");
-        //    eeng::Log("");
-
-        //    eeng::Log("vel speed: %f", glm::length(vel.velocity));
-        //    eeng::Log("current blending : %f", blending);
-        //    eeng::Log("lastAnimation: %i", lastAnimation);
-        //    eeng::Log("goalAnimation: %i", goalAnimation);
-
-        //    eeng::Log("");
-        //    eeng::Log("");
-        //}
-
-        if (blending >= 1.0f) {
-            lastState = currentState;
-            transitionDone = true;
-        }
-        else if (blending <= 0.0f) {
-            // Fully reverted to lastState
-            //lastState = currentState;
-            transitionDone = true;
-        }
-        else
-        {
-            mesh.resource->animateBlend(lastAnimation, goalAnimation,
-                                        animation.characterAnimSpeed * time,
-                                        animation.characterAnimSpeed * time,
-                                        blending);
-            transitionDone = false;
-        }
-*/
