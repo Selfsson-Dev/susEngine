@@ -9,7 +9,11 @@
 #include "ShapeRenderer.hpp"
 #include "InstanceCreator.hpp"
 #include "FSM.h"
-
+#include "PlayerSystem.hpp"
+#include "MovementSystem.hpp"
+#include "FSMSystem.hpp"
+#include "NPCSystem.hpp"
+#include "RenderSystem.hpp"
 
 /// @brief A Game may hold, update and render 3D geometry and GUI elements
 class Game : public eeng::GameBase
@@ -56,9 +60,16 @@ private:
     InstanceCreator instanceCreator;
 
     FSM fsm;
-
     FSM fsmTest;
 
+    Camera camera;
+
+    MovementSystem moveSys;
+    FSMSystem fsmSys;
+    NPCSystem npcSys;
+    RenderSystem renderSys;
+    PlayerSystem playerSys;
+    
     // Matrices for view, projection and viewport
     struct Matrices
     {
@@ -68,24 +79,7 @@ private:
         glm::ivec2 windowSize;
     } matrices;
 
-    // Basic third-person camera
-    struct Camera
-    {
-        glm::vec3 lookAt = glm_aux::vec3_000;   // Point of interest
-        glm::vec3 up = glm_aux::vec3_010;       // Local up-vector
-        float distance = 15.0f;                 // Distance to point-of-interest
-        float sensitivity = 0.005f;             // Mouse sensitivity
-        const float nearPlane = 1.0f;           // Rendering near plane
-        const float farPlane = 500.0f;          // Rendering far plane
-
-        // Position and view angles (computed when camera is updated)
-        float yaw = 0.0f;                       // Horizontal angle (radians)
-        float pitch = -glm::pi<float>() / 8;    // Vertical angle (radians)
-        glm::vec3 pos;                          // Camera position
-
-        // Previous mouse position
-        glm::ivec2 mouse_xy_prev{ -1, -1 };
-    } camera;
+public:
 
     // Light properties
     struct PointLight
@@ -139,19 +133,19 @@ private:
     //    float deltaTime,
     //    InputManagerPtr input);
 
-    void movement_system(float deltaTime);
+    //void movement_system(float deltaTime);
 
-    void player_controller_system(InputManagerPtr input, float deltaTime);
+    //void player_controller_system(InputManagerPtr input, float deltaTime);
 
-    void render_system(float time);
+    //void render_system(float time);
 
-    void NPC_controller_system();
+    //void NPC_controller_system();
 
     void BONEGIZMO();
 
     void blend_test(float time);
 
-    void FSM_system(float delta, float time);
+    //void FSM_system(float delta, float time);
 };
 
 #endif

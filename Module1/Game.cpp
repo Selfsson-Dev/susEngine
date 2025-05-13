@@ -25,6 +25,12 @@ bool Game::init()
     fsm = FSM();
     fsmTest = FSM();
 
+    moveSys = MovementSystem(entity_registry);
+    fsmSys = FSMSystem(entity_registry);
+    npcSys = NPCSystem(entity_registry);
+    renderSys = RenderSystem(entity_registry, forwardRenderer);
+    playerSys = PlayerSystem(entity_registry);
+
     instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::PLAYER);
     instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::GRASS, glm_aux::vec3_000);
     instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::NPC);
@@ -37,16 +43,20 @@ void Game::update(
     float deltaTime,
     InputManagerPtr input)
 {
-    player_controller_system(input, deltaTime);
-    updateCamera(input);
-    NPC_controller_system();
+    //player_controller_system(input, deltaTime);
+    playerSys.update(input, deltaTime, camera, fsm);
 
-    movement_system(deltaTime);
+    updateCamera(input);
+    //NPC_controller_system();
+    npcSys.update();
+    //movement_system(deltaTime);
+    moveSys.update(deltaTime);
+
     fsm.tick(deltaTime, time);
     fsmTest.tick(deltaTime, time);
 
-    FSM_system(deltaTime, time);
-    //updatePlayer(deltaTime, input);
+    //FSM_system(deltaTime, time);
+    fsmSys.update(deltaTime, time, fsm);
 
     pointlight.pos = glm::vec3(
         glm_aux::R(time * 0.1f, { 0.0f, 1.0f, 0.0f }) *
@@ -73,7 +83,8 @@ void Game::render(
     // Begin rendering pass
     forwardRenderer->beginPass(matrices.P, matrices.V, pointlight.pos, pointlight.color, camera.pos);
 
-    render_system(time);
+    //render_system(time);
+    renderSys.update(time);
 
     static bool showBone = false;
 
@@ -179,159 +190,6 @@ void Game::updateCamera(
     camera.pos = camera.lookAt + glm::vec3(rotatedPos);
 }
 
-// Logic for movement based on velocity.
-void Game::movement_system(float deltaTime)
-{
-    auto view = entity_registry->view<TransformComponent, LinearVelocityComponent>();
-
-    for (auto [entity, tfm, vel] : view.each()) {
-
-        glm::mat4 _matrix(1.0f);
-
-        tfm.pos += vel.velocity * deltaTime;
-
-        glm::vec3 modelFwd = glm::vec3(0, 0, 1);
-        float d = glm::dot(modelFwd, vel.dirNorm);
-
-        if (d < -0.9999f) {
-
-            tfm.rot = glm::angleAxis(glm::pi<float>(), glm::vec3(0, 1, 0));
-        }
-        else if (d > 0.9999f) {
-            tfm.rot = glm::quat(1, 0, 0, 0);
-        }
-        else {
-            glm::vec3 axis = glm::normalize(glm::cross(modelFwd, vel.dirNorm));
-            float angle = acos(d);
-            tfm.rot = glm::angleAxis(angle, axis);
-        }
-
-        tfm.worldMatrix = glm::translate(_matrix, tfm.pos) * glm::mat4_cast(tfm.rot) * glm::scale(_matrix, tfm.scale);
-    }
-}
-
-void Game::player_controller_system(InputManagerPtr input, float deltaTime) {
-    // get input
-    using Key = eeng::InputManager::Key;
-    bool W = input->IsKeyPressed(Key::W);
-    bool A = input->IsKeyPressed(Key::A);
-    bool S = input->IsKeyPressed(Key::S);
-    bool D = input->IsKeyPressed(Key::D);
-    bool spaceIsPressed = input->IsKeyPressed(Key::Space);
-
-    //W = true;
-
-    glm::vec3 forward = glm::vec3(glm_aux::R(camera.yaw, glm_aux::vec3_010) * glm::vec4(0.0f, 0.0f, -1.0f, 0.0f));
-    glm::vec3 right = glm::cross(forward, glm_aux::vec3_010);
-
-    // now we know the way to set velocity to
-    glm::vec3 dir = glm::vec3(forward * ((W ? 1.0f : 0.0f) + (S ? -1.0f : 0.0f)) 
-                              + right * ((A ? -1.0f : 0.0f) + (D ? 1.0f : 0.0f)));
-
-    glm::vec3 dirNorm;
-
-    if (glm::length(dir) < 0.05f) {
-        dirNorm = glm_aux::vec3_000;
-    }
-    else {
-        dirNorm = glm::normalize(dir);
-    }
-       
-    auto view = entity_registry->view<TransformComponent, LinearVelocityComponent, PlayerControllerComponent, AnimationComponent, MeshComponent>();
-
-    for (auto [entity, tfm, vel, player, anim, mesh] : view.each()) {
-        //eeng::Log("normalized dir is: %f %f %f" , dirNorm.x, dirNorm.y, dirNorm.z);
-
-        if (spaceIsPressed && player.jumpTimer <= player.jumpDuration) {
-            player.isJumping = true;
-        }
-
-        if (player.jumpTimer >= player.jumpDuration) {
-            player.isJumping = false;
-        }
-
-        if (player.isJumping) {
-            player.jumpTimer += deltaTime;
-        }
-        else {
-            player.jumpTimer = 0.0f;
-        }
-
-        vel.velocity = dirNorm * player.moveSpeed;
-
-        camera.lookAt = tfm.pos;
-        camera.pos = tfm.pos;
-
-        if (player.isJumping) {
-            int animIndex = static_cast<int>(player.Jump);
-            fsm.transition_state(animIndex, true, mesh.resource, player.jumpDuration);
-            continue;
-        }
-        else if (glm::length(dir) > 0) {
-            int animIndex = static_cast<int>(player.Walk);
-            fsm.transition_state(animIndex, false, mesh.resource, 1.0f);
-        }
-        else {
-            int animIndex = static_cast<int>(player.Idle);
-            fsm.transition_state(animIndex, false, mesh.resource, 1.0f);
-            continue;
-        }
-        if (!glm::length(dir) > 0.0f) {
-            continue;
-        }
-
-        vel.dirNorm = dirNorm;
-    }
-}
-
-// Logic to render all meshes with MeshComponent
-void Game::render_system(float time) {
-    auto animView = entity_registry->view<AnimationComponent, MeshComponent>();
-    static float blendingAmount = 0.0f;
-    static int animationState = 0;
-
-    auto view = entity_registry->view<TransformComponent, MeshComponent>();
-
-    for (auto [entity, tfm, mesh] : view.each()) {
-        forwardRenderer->renderMesh(mesh.resource, tfm.worldMatrix);
-    }
-}
-
-void Game::NPC_controller_system() {
-    auto view = entity_registry->view<NPCControllerComponent, TransformComponent, LinearVelocityComponent>();
-
-    for (auto [entity, npcc, tfm, vel] : view.each()) {
-        if (glm::distance(npcc.currentWaypoint, tfm.pos) <= 0.25f) {
-            npcc.waypointIndex += 1;
-
-            if (npcc.waypointIndex + 1 <= npcc.waypoints.size()) {
-                int tempWaypoint = npcc.waypointIndex;
-                glm::vec3 waypoint = npcc.waypoints[tempWaypoint];
-                eeng::Log("npc new waypoint: %f %f %f, index %i", waypoint.x, waypoint.y, waypoint.z, npcc.waypointIndex);
-            }
-        }
-
-        if (npcc.waypointIndex >= npcc.waypoints.size()) {
-            npcc.waypointIndex = 0;
-            eeng::Log("npc went through all waypoints, looping back");
-        }
-
-        npcc.currentWaypoint = npcc.waypoints[npcc.waypointIndex];
-
-        glm::vec3 dir = npcc.currentWaypoint - tfm.pos;
-
-        vel.velocity = glm::normalize(dir) * npcc.moveSpeed;
-        
-        // only rotate if we actually move
-        if (!glm::length(dir) > 0.0f) {
-            continue;
-        }
-        glm::vec3 dirNorm = glm::normalize(dir);
-
-        vel.dirNorm = dirNorm;
-    }
-}
-
 void Game::BONEGIZMO()
 {
     bool drawSkeleton = true;
@@ -364,26 +222,5 @@ void Game::BONEGIZMO()
             shapeRenderer->pop_states<ShapeRendering::Color4u>();
             shapeRenderer->pop_states<ShapeRendering::Color4u>();
         }
-    }
-}
-
-void Game::FSM_system(float delta, float time)
-{
-    auto view = entity_registry->view<TransformComponent, MeshComponent, FSMComponent>();
-
-    for (auto [entity, tfm, mesh, fsmc] : view.each()) {
-        fsmc.timer += delta;
-
-        if (fsmc.timer <= fsmc.cooldown) {
-            fsmTest.transition_state(fsmc.currentIndex, false, mesh.resource);
-        }
-        else {
-            fsmc.timer = 0.0f;
-            fsmc.currentIndex = rand() % mesh.resource->getNbrAnimations();
-        }
-
-        ImGui::Begin("Debug for tester");
-        ImGui::Text("timer for change : %f", fsmc.timer);
-        ImGui::End();
     }
 }

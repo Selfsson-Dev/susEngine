@@ -1,6 +1,23 @@
 #pragma once
 #include "glmcommon.hpp"
 #include <vector>
+struct Camera
+{
+    glm::vec3 lookAt = glm_aux::vec3_000;   // Point of interest
+    glm::vec3 up = glm_aux::vec3_010;       // Local up-vector
+    float distance = 15.0f;                 // Distance to point-of-interest
+    float sensitivity = 0.005f;             // Mouse sensitivity
+    const float nearPlane = 1.0f;           // Rendering near plane
+    const float farPlane = 500.0f;          // Rendering far plane
+
+    // Position and view angles (computed when camera is updated)
+    float yaw = 0.0f;                       // Horizontal angle (radians)
+    float pitch = -glm::pi<float>() / 8;    // Vertical angle (radians)
+    glm::vec3 pos;                          // Camera position
+
+    // Previous mouse position
+    glm::ivec2 mouse_xy_prev{ -1, -1 };
+};
 
 struct LinearVelocityComponent {
     glm::vec3 velocity;
