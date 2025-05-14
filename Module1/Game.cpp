@@ -8,6 +8,9 @@
 #include "GameComponents.hpp"
 #include "EngineComponents.hpp"
 #include "FSM.h"
+#include "Subject.h"
+#include "TestObserver.h"
+#include "EventQueue.h"
 
 bool Game::init()
 {
@@ -30,6 +33,12 @@ bool Game::init()
     npcSys = NPCSystem(entity_registry);
     renderSys = RenderSystem(entity_registry, forwardRenderer);
     playerSys = PlayerSystem(entity_registry);
+
+    Observer* test = new TestObserver();
+    Subject::init();
+    Subject::add_observer(test);
+    EventQueue::init();
+    
 
     instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::PLAYER);
     instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::GRASS, glm_aux::vec3_000);
@@ -61,6 +70,8 @@ void Game::update(
     pointlight.pos = glm::vec3(
         glm_aux::R(time * 0.1f, { 0.0f, 1.0f, 0.0f }) *
         glm::vec4(100.0f, 100.0f, 100.0f, 1.0f));
+
+    EventQueue::process_events();
 }
 
 void Game::render(

@@ -1,4 +1,14 @@
 #include "Subject.h"
+Observer* Subject::observers[Subject::MAX_OBSERVERS] = { nullptr };
+int Subject::numObservers = 0;
+
+void Subject::init() {
+
+	numObservers = 0;
+	for (int i = 0; i < MAX_OBSERVERS; ++i) {
+		observers[i] = nullptr;
+	}
+};
 
 void Subject::add_observer(Observer* observer)
 {

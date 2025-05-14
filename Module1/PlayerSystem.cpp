@@ -1,4 +1,6 @@
 #include "PlayerSystem.hpp"
+#include "EventQueue.h"
+
 void PlayerSystem::update(InputManagerPtr input, float deltaTime, Camera& camera, FSM& fsm)
 {
      //get input
@@ -63,12 +65,16 @@ void PlayerSystem::update(InputManagerPtr input, float deltaTime, Camera& camera
         }
         else {
             int animIndex = static_cast<int>(player.Idle);
+            EventQueue::add_event(entity, PLAYER_IDLE);
             fsm.transition_state(animIndex, false, mesh.resource, 1.0f);
             continue;
         }
+
         if (!glm::length(dir) > 0.0f) {
             continue;
         }
+
+        EventQueue::add_event(entity, PLAYER_MOVING);
 
         vel.dirNorm = dirNorm;
     }
