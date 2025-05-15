@@ -53,11 +53,26 @@ void InstanceCreator::create_player(glm::vec3 spawn)
 
 	auto player = entity_registry_instance->create();
 
+	SphereColliderComponent sphereCol{};
+	sphereCol.sphereCollider = Sphere{ glm::vec3(0, 2, 0), 2.0f, glm::vec3(0, 2, 0) };
+	sphereCol.isTrigger = false;
+	sphereCol.sphereCollider.entityOwner = player;
+
+	AABBColliderComponent aabbCol{};
+	aabbCol.AABBCollider.localPos = glm::vec3(0, 2, 0);
+	aabbCol.AABBCollider.halfWidths[0] = 0.5f;
+	aabbCol.AABBCollider.halfWidths[1] = 2.0f;
+	aabbCol.AABBCollider.halfWidths[2] = 0.5f;
+	aabbCol.isTrigger = false;
+	aabbCol.entityOwner = player;
+
 	entity_registry_instance->emplace<TransformComponent>(player, tfm);
 	entity_registry_instance->emplace<LinearVelocityComponent>(player, vel);
 	entity_registry_instance->emplace<MeshComponent>(player, playerMesh);
 	entity_registry_instance->emplace<PlayerControllerComponent>(player, pcc);
 	entity_registry_instance->emplace<AnimationComponent>(player, animation);
+	entity_registry_instance->emplace<SphereColliderComponent>(player, sphereCol);
+	entity_registry_instance->emplace<AABBColliderComponent>(player, aabbCol);
 }
 
 void InstanceCreator::create_horse(glm::vec3 spawn)

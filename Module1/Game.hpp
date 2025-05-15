@@ -14,6 +14,9 @@
 #include "FSMSystem.hpp"
 #include "NPCSystem.hpp"
 #include "RenderSystem.hpp"
+#include "PhysicsSystem.h"
+#include "BVH.h"
+
 
 /// @brief A Game may hold, update and render 3D geometry and GUI elements
 class Game : public eeng::GameBase
@@ -69,7 +72,11 @@ private:
     NPCSystem npcSys;
     RenderSystem renderSys;
     PlayerSystem playerSys;
-    
+    PhysicsSystem physSys;
+
+    BVH bvh;
+    SphereNode* BVHRoot;
+
     // Matrices for view, projection and viewport
     struct Matrices
     {

@@ -11,6 +11,10 @@
 #include "Subject.h"
 #include "TestObserver.h"
 #include "EventQueue.h"
+#include "PhysicsObserver.h"
+#include "QuestObserver.h"
+
+std::vector<Sphere*> testSpheres();
 
 bool Game::init()
 {
@@ -24,6 +28,35 @@ bool Game::init()
     
     entity_registry = std::make_shared<entt::registry>();
 
+    Plane plane{ glm::vec3(0,0,1), 50.0f };
+    auto wall1 = entity_registry->create();
+    entity_registry->emplace<Plane>(wall1, plane);
+
+    auto AABBTest = entity_registry->create();
+
+    SphereColliderComponent sphereCol{};
+    sphereCol.sphereCollider = Sphere{ glm::vec3(0, 2, 0), 1.0f, glm::vec3(0, 2, 0) };
+    sphereCol.isTrigger = false;
+    sphereCol.sphereCollider.entityOwner = AABBTest;
+
+    AABBColliderComponent aabbCol{};
+    aabbCol.AABBCollider.localPos = glm::vec3(0, 2, 0);
+    aabbCol.AABBCollider.center = glm::vec3(0, 2, 0);
+    aabbCol.AABBCollider.halfWidths[0] = 0.5f;
+    aabbCol.AABBCollider.halfWidths[1] = 2.0f;
+    aabbCol.AABBCollider.halfWidths[2] = 0.5f;
+    aabbCol.isTrigger = false;
+    aabbCol.entityOwner = AABBTest;
+
+    TransformComponent tfm{ glm::vec3(10.0f, 0.0f, 10.0f),
+                        glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),  
+                        glm::vec3(0.03f) };                                               
+
+    entity_registry->emplace<AABBColliderComponent>(AABBTest, aabbCol);
+    entity_registry->emplace<SphereColliderComponent>(AABBTest, sphereCol);
+    entity_registry->emplace<TransformComponent>(AABBTest, tfm);
+
+
     instanceCreator = InstanceCreator(entity_registry);
     fsm = FSM();
     fsmTest = FSM();
@@ -33,18 +66,46 @@ bool Game::init()
     npcSys = NPCSystem(entity_registry);
     renderSys = RenderSystem(entity_registry, forwardRenderer);
     playerSys = PlayerSystem(entity_registry);
+    physSys = PhysicsSystem(entity_registry);
 
+    BVHRoot = bvh.BuildBVHBottomUp(testSpheres(), 10.0f);
+    instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::PLAYER);
+
+    auto view = entity_registry->view<PlayerControllerComponent>();
+    Observer* questObserver;
+    entt::entity playerId;
+    for (auto [entity, pcc] : view.each()) {
+        questObserver = new QuestObserver(entity);
+        playerId = entity;
+    }
+    
     Observer* test = new TestObserver();
+    Observer* physicsObserver = new PhysicsObserver();
     Subject::init();
     Subject::add_observer(test);
+    Subject::add_observer(physicsObserver);
+    Subject::add_observer(questObserver);
     EventQueue::init();
     
+    EventQueue::add_event(playerId, PICK_UP_FOOD);
 
-    instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::PLAYER);
     instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::GRASS, glm_aux::vec3_000);
     instanceCreator.create_type(InstanceCreator::INTANCE_TYPE::NPC);
 
     return true;
+}
+
+std::vector<Sphere*> testSpheres()
+{
+    std::vector<Sphere*> spheres;
+    for (int i = 0; i < 40; ++i) {
+        float x = static_cast<float>(std::rand() % 301) / 10.0f; // 0 to 30
+        float z = static_cast<float>(std::rand() % 301) / 10.0f; // 0 to 30
+        glm::vec3 pos(x, 1.0f, z);
+        Sphere* s = new Sphere{ pos, 1.0f, pos };
+        spheres.push_back(s);
+    }
+    return spheres;
 }
 
 void Game::update(
@@ -55,17 +116,62 @@ void Game::update(
     //player_controller_system(input, deltaTime);
     playerSys.update(input, deltaTime, camera, fsm);
 
+    //auto view = entity_registry->view<PlayerControllerComponent, SphereColliderComponent>();
+
+    //for (auto [entity, pcc, sphere] : view.each()) {
+    //    std::vector<Sphere*> possibleIntersections = bvh.FindPossibleCollisions(BVHRoot, &sphere.sphereCollider);
+
+    //    for (auto possibleSphere : possibleIntersections) {
+    //        shapeRenderer->push_states(ShapeRendering::Color4u::Purple);
+    //        shapeRenderer->push_states(glm_aux::TS(possibleSphere->center, glm::vec3(1.0f, 1.0f, 1.0f)));
+    //        shapeRenderer->push_sphere_wireframe(2.0f, possibleSphere->radius);
+    //        shapeRenderer->pop_states<ShapeRendering::Color4u, glm::mat4>();
+    //    }
+    //}
+    ImGui::Begin("Control colliders");
+
+    auto controlView = entity_registry->view<SphereColliderComponent, AABBColliderComponent>();
+    for (auto [entity, sphere, AABB] : controlView.each()) {
+        ImGui::Text("sphere : isToggle %i for entity: %i", sphere.isTrigger, entity);
+        ImGui::Text("aabb : isToggle %i for entity: %i", AABB.isTrigger, entity);
+
+        if (ImGui::Button("Toggle isTrigger")) {
+            sphere.isTrigger = !sphere.isTrigger;
+            AABB.isTrigger = !AABB.isTrigger;
+        }
+    }
+
+    ImGui::End();
+
     updateCamera(input);
     //NPC_controller_system();
     npcSys.update();
     //movement_system(deltaTime);
     moveSys.update(deltaTime);
 
+    auto beforeView = entity_registry->view<TransformComponent, SphereColliderComponent, AABBColliderComponent>();
+
+    for (auto [entity, tfm, sphere, aabb] : beforeView.each()) {
+        ImGui::Begin("before phys");
+        ImGui::Text("%f %f %f", tfm.pos.x, tfm.pos.y, tfm.pos.z);
+        ImGui::End();
+    }
+    physSys.update(shapeRenderer);
+
+    auto afterView = entity_registry->view<TransformComponent, SphereColliderComponent, AABBColliderComponent>();
+
+    for (auto [entity, tfm, sphere, aabb] : afterView.each()) {
+        ImGui::Begin("after phys");
+        ImGui::Text("%f %f %f", tfm.pos.x, tfm.pos.y, tfm.pos.z);
+        ImGui::End();
+    }
+
     fsm.tick(deltaTime, time);
     fsmTest.tick(deltaTime, time);
 
     //FSM_system(deltaTime, time);
     fsmSys.update(deltaTime, time, fsm);
+
 
     pointlight.pos = glm::vec3(
         glm_aux::R(time * 0.1f, { 0.0f, 1.0f, 0.0f }) *
@@ -235,3 +341,5 @@ void Game::BONEGIZMO()
         }
     }
 }
+
+

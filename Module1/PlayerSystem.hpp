@@ -23,6 +23,7 @@ public:
 
 private:
     std::shared_ptr<entt::registry> entity_registry;
+    void SphereSphereCollsion();
     //FSM fsm;
     //Camera camera;
 };
